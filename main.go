@@ -37,8 +37,6 @@ func main() {
 
 	graph := makeDistancesGraph(breweries)
 
-	fmt.Println(getTotalDistance(breweries))
-
 	fmt.Println(len(graph))
 }
 
@@ -173,4 +171,19 @@ func getTotalDistance(path []brewery) float64 {
 		distance += haversine(path[i].latitude, path[i].longitude, path[i+1].latitude, path[i+1].longitude)
 	}
 	return distance
+}
+
+func setBestPath(currPath []brewery) {
+	currBeerCount := getBeerCnt(currPath)
+	currDistance := getTotalDistance(currPath)
+
+	if currBeerCount > bestBeerCount {
+		bestBeerCount = currBeerCount
+		bestDistance = currDistance
+		bestPath = currPath
+	} else if currBeerCount == bestBeerCount && currDistance < bestDistance {
+		bestBeerCount = currBeerCount
+		bestDistance = currDistance
+		bestPath = currPath
+	}
 }
