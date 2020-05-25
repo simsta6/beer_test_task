@@ -6,6 +6,7 @@ import (
 	"math"
 	"os"
 	"strconv"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -37,7 +38,29 @@ func main() {
 
 	graph := makeDistancesGraph(breweries)
 
-	fmt.Println(len(graph))
+	visited := make([]bool, len(breweries))
+
+	visited[0] = true
+
+	start := time.Now()
+
+	tspRec(breweries, 0., 0, []brewery{}, graph, visited)
+
+	elapsed := time.Since(start)
+
+	for i := range bestPath {
+		fmt.Println(bestPath[i])
+	}
+
+	fmt.Printf("%v\n", bestPath)
+
+	fmt.Printf("%v\n", bestBeerCount)
+
+	fmt.Printf("%v\n", bestDistance)
+
+	fmt.Printf("Method took %s\n", elapsed)
+
+	fmt.Println("Done")
 }
 
 func getBreweriesWithBeersFromDB() []brewery {
@@ -181,9 +204,54 @@ func setBestPath(currPath []brewery) {
 		bestBeerCount = currBeerCount
 		bestDistance = currDistance
 		bestPath = currPath
+		fmt.Printf("First brewery of path: %v\n", currPath[1])
+		fmt.Printf("Breweries count: %v\n", len(currPath)-2)
+		fmt.Printf("Beer count: %v\n", currBeerCount)
+		fmt.Printf("Distance: %v\n", currDistance)
+		fmt.Println("")
 	} else if currBeerCount == bestBeerCount && currDistance < bestDistance {
 		bestBeerCount = currBeerCount
 		bestDistance = currDistance
 		bestPath = currPath
+		fmt.Println("Distance was better")
+		fmt.Printf("First brewery of path: %v\n", currPath[1])
+		fmt.Printf("Breweries count: %v\n", len(currPath)-2)
+		fmt.Printf("Beer count: %v\n", currBeerCount)
+		fmt.Printf("Distance: %v\n", currDistance)
+		fmt.Println("")
+	}
+}
+
+func tspRec(breweries []brewery, distanceTraveled float64, currPos int, path []brewery, graph [][]float64, visited []bool) {
+	maxDistance := 1000.
+	if len(path) > 0 {
+		newPath := path
+		home := breweries[0]
+
+		newPath = append([]brewery{home}, newPath...)
+		homeFinal := home
+		homeFinal.distanceToHome = haversine(homeFinal.latitude, homeFinal.longitude, path[len(path)-1].latitude, path[len(path)-1].longitude)
+
+		newPath = append(newPath, homeFinal)
+
+		setBestPath(newPath)
+	}
+
+	for i := range breweries {
+		if !visited[i] {
+			distance := distanceTraveled + graph[currPos][i]
+
+			if distance+graph[i][0] > maxDistance {
+				continue
+			}
+
+			visited[i] = true
+			path = append(path, breweries[i])
+
+			tspRec(breweries, distance, i, path, graph, visited)
+
+			path = path[:len(path)-1]
+			visited[i] = false
+		}
 	}
 }
