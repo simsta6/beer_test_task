@@ -37,7 +37,7 @@ func main() {
 
 	graph := makeDistancesGraph(breweries)
 
-	fmt.Println(getBeerCnt(breweries))
+	fmt.Println(getTotalDistance(breweries))
 
 	fmt.Println(len(graph))
 }
@@ -165,4 +165,12 @@ func getBeerCnt(path []brewery) int {
 	}
 
 	return len(beer)
+}
+
+func getTotalDistance(path []brewery) float64 {
+	var distance float64
+	for i := 0; i < len(path)-1; i++ {
+		distance += haversine(path[i].latitude, path[i].longitude, path[i+1].latitude, path[i+1].longitude)
+	}
+	return distance
 }
