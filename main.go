@@ -32,9 +32,9 @@ func main() {
 
 	breweries := getBreweriesWithBeersFromDB()
 
-	breweries = getBreweriesWithin1000(lat1, lon1, breweries)
-	brew := brewery{0, "HOME", lat1, lon1, []string{}, 0.}
-	breweries = append([]brewery{brew}, breweries...)
+	home := brewery{0, "HOME", lat1, lon1, []string{}, 0.}
+	breweries = getBreweriesWithin1000(home, breweries)
+	breweries = append([]brewery{home}, breweries...)
 
 	graph := makeDistancesGraph(breweries)
 
@@ -130,12 +130,12 @@ func checkForError(err error) {
 	}
 }
 
-func haversine(lat1 float64, lon1 float64, lat2 float64, lon2 float64) float64 {
+func haversine(firstBrewry brewery, secondBrewery brewery) float64 {
 	//Converting to radians
-	lat1r := lat1 * math.Pi / 180
-	lon1r := lon1 * math.Pi / 180
-	lat2r := lat2 * math.Pi / 180
-	lon2r := lon2 * math.Pi / 180
+	lat1r := firstBrewry.latitude * math.Pi / 180
+	lon1r := firstBrewry.longitude * math.Pi / 180
+	lat2r := secondBrewery.latitude * math.Pi / 180
+	lon2r := secondBrewery.longitude * math.Pi / 180
 
 	dlat := lat2r - lat1r
 	dlon := lon2r - lon1r
@@ -147,11 +147,11 @@ func haversine(lat1 float64, lon1 float64, lat2 float64, lon2 float64) float64 {
 	return c
 }
 
-func getBreweriesWithin1000(lat float64, lon float64, breweries []brewery) []brewery {
+func getBreweriesWithin1000(home brewery, breweries []brewery) []brewery {
 	breweries1000 := make([]brewery, 0)
 
 	for i := range breweries {
-		distance := haversine(lat, lon, breweries[i].latitude, breweries[i].longitude)
+		distance := haversine(home, breweries[i])
 		breweries[i].distanceToHome = distance
 		if distance <= 1000 {
 			breweries1000 = append(breweries1000, breweries[i])
@@ -170,7 +170,7 @@ func makeDistancesGraph(breweries []brewery) [][]float64 {
 
 	for i := range graph {
 		for j := range graph {
-			distance := haversine(breweries[i].latitude, breweries[i].longitude, breweries[j].latitude, breweries[j].longitude)
+			distance := haversine(breweries[i], breweries[j])
 			graph[i][j] = distance
 		}
 	}
@@ -191,7 +191,7 @@ func getBeerCnt(path []brewery) int {
 func getTotalDistance(path []brewery) float64 {
 	var distance float64
 	for i := 0; i < len(path)-1; i++ {
-		distance += haversine(path[i].latitude, path[i].longitude, path[i+1].latitude, path[i+1].longitude)
+		distance += haversine(path[i], path[i+1])
 	}
 	return distance
 }
@@ -230,7 +230,7 @@ func tspRec(breweries []brewery, distanceTraveled float64, currPos int, path []b
 
 		newPath = append([]brewery{home}, newPath...)
 		homeFinal := home
-		homeFinal.distanceToHome = haversine(homeFinal.latitude, homeFinal.longitude, path[len(path)-1].latitude, path[len(path)-1].longitude)
+		homeFinal.distanceToHome = haversine(homeFinal, path[len(path)-1])
 
 		newPath = append(newPath, homeFinal)
 
