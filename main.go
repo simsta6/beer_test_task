@@ -26,6 +26,12 @@ type brewery struct {
 	distanceToHome float64
 }
 
+type pathData struct {
+	beerCount int
+	distance  float64
+	breweries []brewery
+}
+
 func main() {
 	lat1 := 51.74250300
 	lon1 := 19.43295600
@@ -188,43 +194,9 @@ func getBeerCnt(path []brewery) int {
 	return len(beer)
 }
 
-func getTotalDistance(path []brewery) float64 {
-	var distance float64
-	for i := 0; i < len(path)-1; i++ {
-		distance += haversine(path[i], path[i+1])
-	}
-	return distance
-}
-
-func setBestPath(currPath []brewery) {
-	currBeerCount := getBeerCnt(currPath)
-	currDistance := getTotalDistance(currPath)
-
-	if currBeerCount > bestBeerCount {
-		bestBeerCount = currBeerCount
-		bestDistance = currDistance
-		bestPath = currPath
-		fmt.Printf("First brewery of path: %v\n", currPath[1])
-		fmt.Printf("Breweries count: %v\n", len(currPath)-2)
-		fmt.Printf("Beer count: %v\n", currBeerCount)
-		fmt.Printf("Distance: %v\n", currDistance)
-		fmt.Println("")
-	} else if currBeerCount == bestBeerCount && currDistance < bestDistance {
-		bestBeerCount = currBeerCount
-		bestDistance = currDistance
-		bestPath = currPath
-		fmt.Println("Distance was better")
-		fmt.Printf("First brewery of path: %v\n", currPath[1])
-		fmt.Printf("Breweries count: %v\n", len(currPath)-2)
-		fmt.Printf("Beer count: %v\n", currBeerCount)
-		fmt.Printf("Distance: %v\n", currDistance)
-		fmt.Println("")
-	}
-}
-
 func tspRec(breweries []brewery, distanceTraveled float64, currPos int, path []brewery, graph [][]float64, visited []bool, cBeerCnt int, cDistance float64) {
 	maxDistance := 1000.
-	if cBeerCnt > bestBeerCount || (cBeerCnt == bestBeerCount && cDistance < bestDistance) {
+	if cBeerCnt > bestBeerCount || (cBeerCnt == bestBeerCount && cDistance+graph[currPos][0] < bestDistance) {
 		newPath := path
 		home := breweries[0]
 
@@ -235,7 +207,7 @@ func tspRec(breweries []brewery, distanceTraveled float64, currPos int, path []b
 		newPath = append(newPath, homeFinal)
 
 		bestBeerCount = cBeerCnt
-		bestDistance = cDistance
+		bestDistance = cDistance + graph[currPos][0]
 		bestPath = newPath
 	}
 
