@@ -44,7 +44,7 @@ func main() {
 
 	start := time.Now()
 
-	tspRec(breweries, 0., 0, []brewery{}, graph, visited)
+	tspRec(breweries, 0., 0, []brewery{}, graph, visited, 0, 0.)
 
 	elapsed := time.Since(start)
 
@@ -222,9 +222,9 @@ func setBestPath(currPath []brewery) {
 	}
 }
 
-func tspRec(breweries []brewery, distanceTraveled float64, currPos int, path []brewery, graph [][]float64, visited []bool) {
+func tspRec(breweries []brewery, distanceTraveled float64, currPos int, path []brewery, graph [][]float64, visited []bool, cBeerCnt int, cDistance float64) {
 	maxDistance := 1000.
-	if len(path) > 0 {
+	if cBeerCnt > bestBeerCount || (cBeerCnt == bestBeerCount && cDistance < bestDistance) {
 		newPath := path
 		home := breweries[0]
 
@@ -234,7 +234,9 @@ func tspRec(breweries []brewery, distanceTraveled float64, currPos int, path []b
 
 		newPath = append(newPath, homeFinal)
 
-		setBestPath(newPath)
+		bestBeerCount = cBeerCnt
+		bestDistance = cDistance
+		bestPath = newPath
 	}
 
 	for i := range breweries {
@@ -247,9 +249,11 @@ func tspRec(breweries []brewery, distanceTraveled float64, currPos int, path []b
 
 			visited[i] = true
 			path = append(path, breweries[i])
+			cBeerCnt += len(breweries[i].beers)
 
-			tspRec(breweries, distance, i, path, graph, visited)
+			tspRec(breweries, distance, i, path, graph, visited, cBeerCnt, distance)
 
+			cBeerCnt -= len(breweries[i].beers)
 			path = path[:len(path)-1]
 			visited[i] = false
 		}
