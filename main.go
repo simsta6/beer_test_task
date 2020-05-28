@@ -26,12 +26,6 @@ type brewery struct {
 	distanceToHome float64
 }
 
-type pathData struct {
-	beerCount int
-	distance  float64
-	breweries []brewery
-}
-
 func main() {
 	lat1 := 51.74250300
 	lon1 := 19.43295600
@@ -60,7 +54,15 @@ func main() {
 
 	fmt.Printf("%v\n", bestPath)
 
-	fmt.Printf("%v\n", bestBeerCount)
+	beers := []string{}
+
+	for i := range bestPath {
+		beers = append(beers, bestPath[i].beers...)
+	}
+
+	beers = unique(beers)
+
+	fmt.Printf("%v\n", len(beers))
 
 	fmt.Printf("%v\n", bestDistance)
 
@@ -159,7 +161,7 @@ func getBreweriesWithin1000(home brewery, breweries []brewery) []brewery {
 	for i := range breweries {
 		distance := haversine(home, breweries[i])
 		breweries[i].distanceToHome = distance
-		if distance <= 1000 {
+		if distance <= 600 {
 			breweries1000 = append(breweries1000, breweries[i])
 		}
 	}
@@ -183,19 +185,20 @@ func makeDistancesGraph(breweries []brewery) [][]float64 {
 	return graph
 }
 
-func getBeerCnt(path []brewery) int {
-	beer := []string{}
-	for i := range path {
-		for j := range path[i].beers {
-			beer = append(beer, path[i].beers[j])
+func unique(beers []string) []string {
+	keys := make(map[string]bool)
+	list := []string{}
+	for _, entry := range beers {
+		if _, value := keys[entry]; !value {
+			keys[entry] = true
+			list = append(list, entry)
 		}
 	}
-
-	return len(beer)
+	return list
 }
 
 func tspRec(breweries []brewery, distanceTraveled float64, currPos int, path []brewery, graph [][]float64, visited []bool, cBeerCnt int, cDistance float64) {
-	maxDistance := 1000.
+	maxDistance := 1200.
 	if cBeerCnt > bestBeerCount || (cBeerCnt == bestBeerCount && cDistance+graph[currPos][0] < bestDistance) {
 		newPath := path
 		home := breweries[0]
@@ -211,7 +214,7 @@ func tspRec(breweries []brewery, distanceTraveled float64, currPos int, path []b
 		bestPath = newPath
 	}
 
-	for i := range breweries {
+	for i := 0; i < len(breweries); i++ {
 		if !visited[i] {
 			distance := distanceTraveled + graph[currPos][i]
 
@@ -231,3 +234,77 @@ func tspRec(breweries []brewery, distanceTraveled float64, currPos int, path []b
 		}
 	}
 }
+
+// func getBreweriesWithinSpecDistanceUnvisited(breweries []brewery, graph [][]float64, visited []bool, distance float64, position int) []brewery {
+// 	closeBreweries := []brewery{}
+// 	for j := range graph {
+// 		if graph[position][j]+graph[j][0] < distance && !visited[j] {
+// 			closeBreweries = append(closeBreweries, breweries[j])
+// 		}
+// 	}
+// 	return closeBreweries
+// }
+
+// func tspRec2(breweries []brewery, distanceTraveled float64, currPos int, path []brewery, graph [][]float64, visited []bool, cBeerCnt int, cDistance float64) {
+// 	maxDistance := 1200.
+//
+// 	for i := 0; i < len(breweries); i++ {
+// 		if !visited[i] {
+// 			distance := distanceTraveled + graph[currPos][i]
+//
+// 			if distance+graph[i][0] > maxDistance {
+// 				continue
+// 			}
+//
+// 			visited[i] = true
+// 			path = append(path, breweries[i])
+// 			cBeerCnt += len(breweries[i].beers)
+// 			closeBrew := getBreweriesWithinSpecDistanceUnvisited(breweries, graph, visited, maxDistance-distance, i)
+//
+// 			secRec(closeBrew, distance, i, path, graph, visited, cBeerCnt, distance)
+//
+// 			cBeerCnt -= len(breweries[i].beers)
+// 			path = path[:len(path)-1]
+// 			visited[i] = false
+// 		}
+// 	}
+// }
+
+// func secRec(breweries []brewery, distanceTraveled float64, currPos int, path []brewery, graph [][]float64, visited []bool, cBeerCnt int, cDistance float64) {
+// 	maxDistance := 1200.
+//
+// 	if cBeerCnt > bestBeerCount || (cBeerCnt == bestBeerCount && cDistance+graph[currPos][0] < bestDistance) {
+// 		newPath := path
+// 		home := breweries[0]
+//
+// 		newPath = append([]brewery{home}, newPath...)
+// 		homeFinal := home
+// 		homeFinal.distanceToHome = haversine(homeFinal, path[len(path)-1])
+//
+// 		newPath = append(newPath, homeFinal)
+//
+// 		bestBeerCount = cBeerCnt
+// 		bestDistance = cDistance + graph[currPos][0]
+// 		bestPath = newPath
+// 	}
+//
+// 	for i := 0; i < len(breweries); i++ {
+// 		if !visited[i] {
+// 			distance := distanceTraveled + graph[currPos][i]
+//
+// 			if distance+graph[i][0] > maxDistance {
+// 				continue
+// 			}
+//
+// 			visited[i] = true
+// 			path = append(path, breweries[i])
+// 			cBeerCnt += len(breweries[i].beers)
+//
+// 			tspRec2(breweries, distance, i, path, graph, visited, cBeerCnt, distance)
+//
+// 			cBeerCnt -= len(breweries[i].beers)
+// 			path = path[:len(path)-1]
+// 			visited[i] = false
+// 		}
+// 	}
+// }
