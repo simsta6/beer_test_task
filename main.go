@@ -36,11 +36,6 @@ func main() {
 
 	home := brewery{0, "HOME", lat1, lon1, []string{}, 0.}
 	breweries = getBreweriesWithin1000(home, breweries)
-
-	for i := range breweries {
-		fmt.Printf("%v\n", breweries[i])
-	}
-
 	breweries = append([]brewery{home}, breweries...)
 
 	graph := makeDistancesGraph(breweries)
