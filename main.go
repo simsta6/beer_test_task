@@ -27,8 +27,19 @@ var (
 )
 
 func main() {
-	lat1 := 51.355468
-	lon1 := 11.100790
+	// lat1 := 51.355468
+	// lon1 := 11.100790
+
+	if len(os.Args) != 3 {
+		fmt.Printf("Program usage:\n%v latitude longitude", os.Args[0])
+		os.Exit(1)
+	}
+
+	lat1, err := strconv.ParseFloat(os.Args[1], 64)
+	checkForError(err)
+
+	lon1, err := strconv.ParseFloat(os.Args[2], 64)
+	checkForError(err)
 
 	start := time.Now()
 
@@ -57,7 +68,6 @@ func main() {
 	beers = getUniqueBeers(beers)
 
 	printResults(len(beers), elapsed)
-
 }
 
 func printResults(beersCnt int, elapsed time.Duration) {
