@@ -113,7 +113,7 @@ func printResults(beers []string, elapsed time.Duration) {
 
 func getBreweriesWithBeersFromDB(home brewery) []brewery {
 	breweries := make([]brewery, 0)
-	conn, err := sql.Open("mysql", "root:@tcp(127.0.0.1:3306)/beer-database")
+	conn, err := sql.Open("mysql", "root:@tcp(0.0.0.0:3306)/beer-database")
 	checkForError(err)
 
 	queryForBreweries := `SELECT b.id, b.name, geo.longitude, geo.latitude 
