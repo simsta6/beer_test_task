@@ -27,21 +27,30 @@ var (
 )
 
 func main() {
-	lat1 := 51.355468
-	lon1 := 11.100790
+	checkArguments()
+
+	lat, err := strconv.ParseFloat(os.Args[1], 64)
+	checkForError(err)
+	lon, err := strconv.ParseFloat(os.Args[2], 64)
+	checkForError(err)
+
+	home := brewery{0, "HOME", lat, lon, []string{}, 0.}
+	breweries := getBreweriesWithBeersFromDB(home)
 
 	start := time.Now()
 
-	breweries := getBreweriesWithBeersFromDB()
+	breweries = getBreweriesWithin1000(breweries)
 
-	home := brewery{0, "HOME", lat1, lon1, []string{}, 0.}
-	breweries = getBreweriesWithin1000(home, breweries)
+	if len(breweries) == 0 {
+		fmt.Printf("There is no solution\n")
+		os.Exit(1)
+	}
+
 	breweries = append([]brewery{home}, breweries...)
 
 	graph := makeDistancesGraph(breweries)
 
 	visited := make([]bool, len(breweries))
-
 	visited[0] = true
 
 	tspRec2(breweries, 0., 0, []brewery{}, graph, visited, 0, 0.)
@@ -49,36 +58,62 @@ func main() {
 	elapsed := time.Since(start)
 
 	beers := []string{}
-
 	for i := range bestPath {
 		beers = append(beers, bestPath[i].beers...)
 	}
-
 	beers = getUniqueBeers(beers)
 
-	printResults(len(beers), elapsed)
-
+	printResults(beers, elapsed)
 }
 
-func printResults(beersCnt int, elapsed time.Duration) {
-	fmt.Printf("Breweries: \n")
-
-	for i := range bestPath {
-		fmt.Printf("%v\n", bestPath[i])
+func checkArguments() {
+	if len(os.Args) != 3 {
+		fmt.Printf("Program usage:\n%v latitude longitude\n", os.Args[0])
+		os.Exit(1)
 	}
 
-	fmt.Printf("Beers: %v\n", beersCnt)
+	lat, err := strconv.ParseFloat(os.Args[1], 64)
+	checkForError(err)
+	lon, err := strconv.ParseFloat(os.Args[2], 64)
+	checkForError(err)
 
-	fmt.Printf("Distance: %v\n", bestDistance)
+	if lat > 90 || lat < -90 {
+		fmt.Printf("Latitudes range from -90 to 90")
+		os.Exit(1)
+	}
 
-	fmt.Printf("Program took: %s\n", elapsed)
+	if lon > 180 || lon < -180 {
+		fmt.Printf("Longitudes range from -180 to 180")
+		os.Exit(1)
+	}
 
-	fmt.Println("Done")
 }
 
-func getBreweriesWithBeersFromDB() []brewery {
+func printResults(beers []string, elapsed time.Duration) {
+	fmt.Printf("Found %v beer factories: \n", len(bestPath)-2)
+
+	for i := 0; i < len(bestPath); i++ {
+		if i == 0 {
+			fmt.Printf("\t[%v] %v: %.8f, %.8f distance %.0fkm\n", bestPath[i].ID, bestPath[i].name, bestPath[i].latitude, bestPath[i].longitude, 0.)
+			continue
+		}
+		fmt.Printf("\t[%v] %v: %.8f, %.8f distance %.1fkm\n", bestPath[i].ID, bestPath[i].name, bestPath[i].latitude, bestPath[i].longitude, haversine(bestPath[i], bestPath[i-1]))
+	}
+
+	fmt.Printf("\nTotal distance traveled: %.1fkm\n", bestDistance)
+
+	fmt.Printf("\n\nCollected %v beer types:\n", len(beers))
+
+	for i := range beers {
+		fmt.Printf("\t%v\n", beers[i])
+	}
+
+	fmt.Printf("\nProgram took: %s\n", elapsed)
+}
+
+func getBreweriesWithBeersFromDB(home brewery) []brewery {
 	breweries := make([]brewery, 0)
-	conn, err := sql.Open("mysql", "root:@tcp(127.0.0.1:3306)/beer-database")
+	conn, err := sql.Open("mysql", "root:@tcp(0.0.0.0:3306)/beer-database")
 	checkForError(err)
 
 	queryForBreweries := `SELECT b.id, b.name, geo.longitude, geo.latitude 
@@ -123,6 +158,7 @@ func getBreweriesWithBeersFromDB() []brewery {
 		}
 
 		brew.beers = beers
+		brew.distanceToHome = haversine(home, brew)
 
 		bconn.Close()
 
@@ -160,13 +196,11 @@ func haversine(firstBrewry brewery, secondBrewery brewery) float64 {
 	return c
 }
 
-func getBreweriesWithin1000(home brewery, breweries []brewery) []brewery {
+func getBreweriesWithin1000(breweries []brewery) []brewery {
 	breweries1000 := make([]brewery, 0)
 
 	for i := range breweries {
-		distance := haversine(home, breweries[i])
-		breweries[i].distanceToHome = distance
-		if distance <= 1000 {
+		if breweries[i].distanceToHome <= 1000 {
 			breweries1000 = append(breweries1000, breweries[i])
 		}
 	}
@@ -241,24 +275,17 @@ func getUniqueBeers(beers []string) []string {
 // }
 
 func tspRec2(breweries []brewery, distanceTraveled float64, currPos int, path []brewery, graph [][]float64, visited []bool, cBeerCnt int, cDistance float64) {
-	if len(breweries) == 0 {
-		fmt.Printf("There is no solution\n")
-	}
 	maxDistance := 2000.
 
 	for i := 0; i < len(breweries); i++ {
 		if !visited[i] {
 			distance := distanceTraveled + graph[currPos][i]
-
-			if distance+graph[i][0] > maxDistance {
-				continue
-			}
-
-			visited[i] = true
-			path = append(path, breweries[i])
 			cBeerCnt += len(breweries[i].beers)
 
-			if cBeerCnt > bestBeerCount || (cBeerCnt == bestBeerCount && distance+graph[i][0] < bestDistance) {
+			if distance+graph[i][0] < maxDistance && (cBeerCnt > bestBeerCount || (cBeerCnt == bestBeerCount && distance+graph[i][0] < bestDistance)) {
+				visited[i] = true
+				path = append(path, breweries[i])
+
 				newPath := path
 				home := breweries[0]
 
@@ -272,15 +299,12 @@ func tspRec2(breweries []brewery, distanceTraveled float64, currPos int, path []
 				bestDistance = distance + graph[i][0]
 				bestPath = newPath
 
-				tspRec2(breweries, distance, i, path, graph, visited, cBeerCnt, distance)
+				tspRec2(breweries, distance, i, path, graph, visited, cBeerCnt, distance+graph[i][0])
 
-				cBeerCnt -= len(breweries[i].beers)
 				path = path[:len(path)-1]
 				visited[i] = false
 			} else {
-				cBeerCnt -= len(breweries[i].beers)
-				path = path[:len(path)-1]
-				visited[i] = false
+				continue
 			}
 		}
 	}

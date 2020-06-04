@@ -37,7 +37,6 @@ func TestHaversine(t *testing.T) {
 
 func TestGetBreweriesWithin1000(t *testing.T) {
 	//Should return 6 breweries
-	home := brewery{0, "home", 51.355468, 11.100790, []string{}, 0.}
 	breweries := []brewery{
 		brewery{1267, "Tin Whistle Brewing", 49.49440002441406, -119.61000061035156, []string{}, 7869.721023294844},
 		brewery{1268, "Titletown Brewing", 44.52000045776367, -88.01730346679688, []string{}, 6839.141532625284},
@@ -53,23 +52,7 @@ func TestGetBreweriesWithin1000(t *testing.T) {
 		brewery{1099, "Samuel Smith Old Brewery (Tadcaster)", 53.883399963378906, -1.2625000476837158, []string{}, 879.3105926211241},
 		brewery{1111, "Sarah Hughes Brewery", 52.54349899291992, -2.115600109100342, []string{}, 914.0475492655376}}
 
-	expected := 6
-	got := getBreweriesWithin1000(home, breweries)
-
-	if len(got) != expected {
-		t.Errorf("getBreweriesWithin1000 slice length should have been: %v, but got: %v", expected, len(got))
-	}
-
-	//When home has 0 and 0
-	home = brewery{0, "home", 0, 0, []string{}, 0.}
-	breweries = []brewery{
-		brewery{1267, "Tin Whistle Brewing", 49.49440002441406, -119.61000061035156, []string{}, 7869.721023294844},
-		brewery{1268, "Titletown Brewing", 44.52000045776367, -88.01730346679688, []string{}, 6839.141532625284},
-		brewery{1269, "Tivoli Brewing", 39.739200592041016, -104.98500061035156, []string{}, 8145.293542222566},
-		brewery{1271, "Tommyknocker Brewery and Pub", 39.741798400878906, -105.51799774169922, []string{}, 8171.6742897312},
-		brewery{1272, "Tomos Watkin and Sons Ltd.", 51.66659927368164, -3.9442999362945557, []string{}, 1039.9077572663819},
-		brewery{1274, "Tooheys", -33.850101470947266, 151.0449981689453, []string{}, 16268.64846307816},
-
+	expected := []brewery{
 		brewery{1056, "Ridgeway Brewing", 51.546199798583984, -1.1354999542236328, []string{}, 847.1914449316964},
 		brewery{1083, "Ruppaner-Brauerei", 47.68550109863281, 9.208000183105469, []string{}, 430.3081461406065},
 		brewery{1088, "SA Brain & Co. Ltd.", 51.47359848022461, -3.178999900817871, []string{}, 988.8234297974843},
@@ -77,22 +60,32 @@ func TestGetBreweriesWithin1000(t *testing.T) {
 		brewery{1099, "Samuel Smith Old Brewery (Tadcaster)", 53.883399963378906, -1.2625000476837158, []string{}, 879.3105926211241},
 		brewery{1111, "Sarah Hughes Brewery", 52.54349899291992, -2.115600109100342, []string{}, 914.0475492655376}}
 
-	expected = 0
-	got = getBreweriesWithin1000(home, breweries)
+	got := getBreweriesWithin1000(breweries)
 
-	if len(got) != expected {
-		t.Errorf("getBreweriesWithin1000 slice length should have been: %v, but got: %v", expected, len(got))
+	if len(got) != len(expected) {
+		t.Errorf("getBreweriesWithin1000 should have returned empty slice. \nExpected: %v\n got: %v", len(expected), len(got))
+	}
+
+	for i := range expected {
+		if got[i].ID != expected[i].ID {
+			t.Errorf("getBreweriesWithin1000 slice values are diferent. \nExpected: %v\n got: %v", expected[i], got[i])
+		}
 	}
 
 	//When list of breweries is empty
-	home = brewery{0, "home", 51.355468, 11.100790, []string{}, 0.}
 	breweries = []brewery{}
 
-	expected = 0
-	got = getBreweriesWithin1000(home, breweries)
+	expected = []brewery{}
+	got = getBreweriesWithin1000(breweries)
 
-	if len(got) != expected {
-		t.Errorf("getBreweriesWithin1000 slice length should have been: %v, but got: %v", expected, len(got))
+	if len(got) != len(expected) {
+		t.Errorf("getBreweriesWithin1000 should have returned empty slice. \nExpected: %v\n got: %v", len(expected), len(got))
+	}
+
+	for i := range expected {
+		if got[i].ID != expected[i].ID {
+			t.Errorf("getBreweriesWithin1000 slice values are diferent. \nExpected: %v\n got: %v", expected[i], got[i])
+		}
 	}
 }
 
