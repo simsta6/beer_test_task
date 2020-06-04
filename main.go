@@ -113,7 +113,25 @@ func printResults(beers []string, elapsed time.Duration) {
 
 func getBreweriesWithBeersFromDB(home brewery) []brewery {
 	breweries := make([]brewery, 0)
-	conn, err := sql.Open("mysql", "root:@tcp(0.0.0.0:3306)/beer-database")
+
+	var (
+		conn *sql.DB
+		err error
+		retry int
+	)
+
+	for retry = 0; retry <100; retry++ {
+		conn, err = sql.Open("mysql", "root:@tcp(golang_db)/beer-database")
+		if err == nil {
+			break // success!
+		}
+		<- time.After(1 * time.Second)
+	}
+	if retry == 100 {
+		fmt.Println("could not connect to db after 10 retries")
+		panic("oh no")
+	}
+
 	checkForError(err)
 
 	queryForBreweries := `SELECT b.id, b.name, geo.longitude, geo.latitude 
@@ -135,14 +153,11 @@ func getBreweriesWithBeersFromDB(home brewery) []brewery {
 		err = results.Scan(&brew.ID, &brew.name, &brew.longitude, &brew.latitude)
 		checkForError(err)
 
-		bconn, err := sql.Open("mysql", "root:@tcp(127.0.0.1:3306)/beer-database")
-		checkForError(err)
-
 		queryForBeers := `SELECT beer.name FROM beer 
 							RIGHT JOIN breweries ON breweries.id = beer.brewery_id 
 							WHERE beer.name IS NOT NULL AND brewery_id = ` + strconv.Itoa(brew.ID)
 
-		bstatement, err := bconn.Prepare(queryForBeers)
+		bstatement, err := conn.Prepare(queryForBeers)
 		checkForError(err)
 
 		bresults, err := bstatement.Query()
@@ -159,8 +174,6 @@ func getBreweriesWithBeersFromDB(home brewery) []brewery {
 
 		brew.beers = beers
 		brew.distanceToHome = haversine(home, brew)
-
-		bconn.Close()
 
 		if len(brew.beers) > 0 {
 			breweries = append(breweries, brew)

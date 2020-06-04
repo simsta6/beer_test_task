@@ -16,6 +16,9 @@ services:
     build:
       context: .
     container_name: golang_app
+    volumes:
+        - .:/go/beer-test
+    working_dir: /go/beer-test
     ports:
       - "8080:8080"
     tty: true
