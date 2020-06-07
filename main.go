@@ -21,8 +21,46 @@ type brewery struct {
 }
 
 type node struct {
-	level                 int
-	profit, bound, weight float64
+	level                             int
+	cost, bound                       float64
+	includedBrews                     []brewery
+	excludedBrews, includedBrewsIndex []int
+	beerCnt                           int
+}
+
+type linkedList struct {
+	leftN  node
+	rightN node
+}
+
+func (n *node) getLastBrew() brewery {
+	var brew brewery
+	if len(n.includedBrews) > 0 {
+		brew = n.includedBrews[len(n.includedBrews)-1]
+	}
+	return brew
+}
+
+func (n *node) getFirstBrew() brewery {
+	var brew brewery
+	if len(n.includedBrews) > 0 {
+		brew = n.includedBrews[0]
+	}
+	return brew
+}
+
+func (n *node) getTraveledDistance() float64 {
+	distance := 0.
+	if len(n.includedBrews) == 1 {
+		distance = n.includedBrews[0].distanceToHome
+	} else {
+		distance += n.includedBrews[0].distanceToHome
+		for i := 1; i < len(n.includedBrews); i++ {
+			distance += haversine(n.includedBrews[i], n.includedBrews[i-1])
+		}
+		distance += n.includedBrews[len(n.includedBrews)-1].distanceToHome
+	}
+	return distance
 }
 
 var (
@@ -40,15 +78,21 @@ func main() {
 	// lon, err := strconv.ParseFloat(os.Args[2], 64)
 	// checkForError(err)
 
-	lat := 57.
-	lon := 35.
+	// lat := 57.
+	// lon := 35.
+
+	//lat := 51.74250300
+	//lon := 19.43295600
+
+	lat := 51.355468
+	lon := 11.100790
 
 	home := brewery{0, "HOME", lat, lon, []string{}, 0.}
 	breweries := getBreweriesWithBeersFromDB(home)
 
 	start := time.Now()
 
-	breweries = getCloseBreweries(breweries, maxDistance)
+	breweries = getCloseBreweries(breweries, home, maxDistance/2)
 
 	if len(breweries) == 0 {
 		fmt.Printf("There is no solution\n")
@@ -57,45 +101,61 @@ func main() {
 
 	breweries = append([]brewery{home}, breweries...)
 
-	graph := makeDistancesGraph(breweries)
+	//graph := makeDistancesGraph(breweries)
 
-	for i := range graph {
-		for j := range graph[i] {
-			fmt.Printf("%4.f      ", graph[i][j])
-		}
-		fmt.Printf("\n")
-	}
+	// for i := range graph {
+	// 	for j := range graph[i] {
+	// 		fmt.Printf("%4.f      ", graph[i][j])
+	// 	}
+	// 	fmt.Printf("\n")
+	// }
+	//
+	// for i := range breweries {
+	// 	for j := range breweries[i].beers {
+	// 		fmt.Printf("%s, ", breweries[i].beers[j])
+	// 	}
+	// 	fmt.Printf("| %v\n", len(breweries[i].beers))
+	// }
+	//
+	// for i := range breweries {
+	// 	fmt.Printf("%v\n", breweries[i])
+	// }
+	//
+	// fmt.Printf("%v\n", int(math.Round((float64(2) / 2))))
+	// fmt.Printf("%v\n", int(math.Round((float64(3) / 2))))
+	// fmt.Printf("%v\n", int(math.Round((float64(5) / 2))))
 
-	for i := range breweries {
-		for j := range breweries[i].beers {
-			fmt.Printf("%s, ", breweries[i].beers[j])
-		}
-		fmt.Printf("| %v\n", len(breweries[i].beers))
-	}
-
-	for i := range breweries {
-		fmt.Printf("%v\n", breweries[i])
-	}
-
-	countCostandBound(breweries, 2000., []int{2})
-
-	visited := make([]bool, len(breweries))
-
-	visited[0] = true
-
-	tspRec(breweries, 0., 0, []brewery{}, graph, visited, 0, 0., maxDistance)
-
-	//tspRec2(breweries, 0., 0, []brewery{}, graph, visited, 0, 0.)
+	nodes := knapsack(breweries, maxDistance)
 
 	elapsed := time.Since(start)
 
-	beers := []string{}
-	for i := range bestPath {
-		beers = append(beers, bestPath[i].beers...)
-	}
-	beers = getUniqueBeers(beers)
+	fmt.Printf("\n\n\n")
 
-	printResults(beers, elapsed)
+	for _, i := range nodes {
+		for _, j := range i.includedBrews {
+			fmt.Printf("%v\n", j)
+		}
+		fmt.Printf("%v\n", i.beerCnt)
+		fmt.Printf("\n\n\n")
+	}
+
+	fmt.Printf("%v\n", elapsed)
+
+	//visited := make([]bool, len(breweries))
+
+	//visited[0] = true
+
+	//tspRec(breweries, 0., 0, []brewery{}, graph, visited, 0, 0., 1000.)
+
+	//tspRec2(breweries, 0., 0, []brewery{}, graph, visited, 0, 0.)
+
+	// beers := []string{}
+	// for i := range bestPath {
+	// 	beers = append(beers, bestPath[i].beers...)
+	// }
+	// beers = getUniqueBeers(beers)
+
+	// printResults(beers, elapsed)
 }
 
 func checkArguments() {
@@ -240,11 +300,24 @@ func haversine(firstBrewry brewery, secondBrewery brewery) float64 {
 	return c
 }
 
-func getCloseBreweries(breweries []brewery, maxDistance float64) []brewery {
+func getCloseBreweries(breweries []brewery, currentB brewery, distance float64) []brewery {
 	closeBreweries := make([]brewery, 0)
 
 	for i := range breweries {
-		if breweries[i].distanceToHome <= maxDistance/2 {
+		currDistance := haversine(currentB, breweries[i])
+		if currDistance <= distance && currDistance != 0. {
+			closeBreweries = append(closeBreweries, breweries[i])
+		}
+	}
+
+	return closeBreweries
+}
+
+func breweriesCanGetHome(breweries []brewery, currentB brewery, distance float64) []brewery {
+	closeBreweries := make([]brewery, 0)
+
+	for i := range breweries {
+		if haversine(currentB, breweries[i])+breweries[i].distanceToHome <= distance {
 			closeBreweries = append(closeBreweries, breweries[i])
 		}
 	}
@@ -317,11 +390,12 @@ func tspRec(breweries []brewery, distanceTraveled float64, currPos int, path []b
 	}
 }
 
-func countCostandBound(breweries []brewery, maxDistance float64, excluded []int) (float64, float64) {
-	cost := 0.
-	bound := 0.
-	tDistance := 0.
-	var lastBrew brewery
+func countCostandBound(breweries []brewery, excludedBrews []int, maxDistance float64) (float64, float64, []brewery) {
+	var (
+		cost, bound, tDistance float64
+		lastBrew               brewery
+		includedBrews          []brewery
+	)
 	if len(breweries) > 0 {
 		lastBrew = breweries[0]
 	}
@@ -329,8 +403,8 @@ func countCostandBound(breweries []brewery, maxDistance float64, excluded []int)
 outterloop:
 	for i := 1; i < len(breweries); i++ {
 
-		for j := range excluded {
-			if excluded[j] == i {
+		for j := range excludedBrews {
+			if excludedBrews[j] == i {
 				continue outterloop
 			}
 		}
@@ -342,6 +416,7 @@ outterloop:
 			bound += beerCnt
 			tDistance += distance
 			lastBrew = breweries[i]
+			includedBrews = append(includedBrews, breweries[i])
 		} else {
 			cost += beerCnt / (distance + breweries[i].distanceToHome) * (maxDistance - tDistance)
 			break
@@ -353,10 +428,186 @@ outterloop:
 		bound = -bound
 	}
 
-	return cost, bound
+	return cost, bound, includedBrews
 }
 
-// func knapsack(W float64, arr []Brewery, n int) int{
-// 	//Q queue<Node>
+func countCostandBound2(breweries []brewery, includedBrewsIndex, excludedBrews []int, maxDistance float64) (float64, float64, []brewery) {
+	var (
+		cost, bound, tDistance float64
+		lastBrew               brewery
+		includedBrews          []brewery
+	)
+	if len(breweries) > 0 {
+		lastBrew = breweries[0]
+	}
 
-// }
+outterloop:
+	for i := 1; i < len(breweries); i++ {
+
+		for j := range excludedBrews {
+			if excludedBrews[j] == i {
+				continue outterloop
+			}
+		}
+
+		for j := range includedBrewsIndex {
+			if includedBrewsIndex[j] == i {
+				includedBrews = append(includedBrews, breweries[i])
+			}
+		}
+
+		distance := haversine(breweries[i], lastBrew)
+		beerCnt := float64(len(breweries[i].beers))
+		if tDistance+distance+breweries[i].distanceToHome <= maxDistance {
+			cost += beerCnt
+			bound += beerCnt
+			tDistance += distance
+			lastBrew = breweries[i]
+
+		} else {
+			cost += beerCnt / (distance + breweries[i].distanceToHome) * (maxDistance - tDistance)
+			break
+		}
+	}
+
+	if cost != 0 || bound != 0 {
+		cost = -cost
+		bound = -bound
+	}
+
+	return cost, bound, includedBrews
+}
+
+func knapsack(breweries []brewery, maxDistance float64) []node {
+	cost, bound, includedBrews := countCostandBound(breweries, []int{}, maxDistance)
+	includedBrewsIndex := []int{}
+	upper := bound
+
+	nodes := []node{
+		{0, cost, bound, includedBrews, []int{}, []int{}, 0}}
+
+	bestNodes := []node{}
+
+	var cNode node
+	var lNode node
+	var rightNode node
+
+	//cnt := 2
+
+	for len(nodes) > 0 {
+
+		if len(nodes) > 1 {
+			var highestCostNode node
+			index := -1
+			highestCostNode.cost = 0
+			for i := range nodes {
+				if nodes[i].cost < highestCostNode.cost {
+					highestCostNode = nodes[i]
+					index = i
+				}
+			}
+			lNode = highestCostNode
+			nodes[index] = nodes[len(nodes)-1]
+			nodes = nodes[:len(nodes)-1]
+		} else if len(nodes) == 1 {
+			lNode = nodes[len(nodes)-1]
+			nodes = nodes[:len(nodes)-1]
+		} else {
+			break
+		}
+
+		cNode.level = lNode.level + 1
+
+		includedID := cNode.level //int(math.Round((float64(cNode.level) / 2)))
+
+		excludedBrews := lNode.excludedBrews
+		includedBrewsIndex = append(lNode.includedBrewsIndex, includedID)
+
+		//cost, bound, includedBrews = countCostandBound(breweries, excludedBrews, maxDistance)
+		cost, bound, includedBrews = countCostandBound2(breweries, includedBrewsIndex, excludedBrews, maxDistance)
+
+		cNode.cost = cost
+		cNode.bound = bound
+		cNode.includedBrews = includedBrews
+		cNode.includedBrewsIndex = includedBrewsIndex
+		cNode.excludedBrews = excludedBrews
+
+		if bound < upper {
+			upper = bound
+			for i := 0; i < len(nodes); i++ {
+				if nodes[i].cost < upper && len(nodes) > i {
+					nodes[i] = nodes[len(nodes)-1]
+					nodes = nodes[:len(nodes)-1]
+				}
+			}
+		}
+
+		rightNode.level = lNode.level + 1
+
+		excludedBrews = append(excludedBrews, includedID)
+		includedBrewsIndex = lNode.includedBrewsIndex
+
+		//cost, bound, includedBrews = countCostandBound(breweries, excludedBrews, maxDistance)
+		cost, bound, includedBrews = countCostandBound2(breweries, includedBrewsIndex, excludedBrews, maxDistance)
+
+		rightNode.cost = cost
+		rightNode.bound = bound
+		rightNode.includedBrews = includedBrews
+		rightNode.includedBrewsIndex = includedBrewsIndex
+		rightNode.excludedBrews = excludedBrews
+
+		if bound < upper {
+			upper = bound
+			for i := 0; i < len(nodes); i++ {
+				if nodes[i].cost < upper && len(nodes) > i {
+					nodes[i] = nodes[len(nodes)-1]
+					nodes = nodes[:len(nodes)-1]
+				}
+			}
+		}
+
+		distance := cNode.getTraveledDistance()
+
+		if len(getCloseBreweries(breweries, cNode.getLastBrew(), maxDistance-distance)) > 0 {
+			beers := []string{}
+			for _, i := range cNode.includedBrews {
+				beers = append(beers, i.beers...)
+			}
+			beers = getUniqueBeers(beers)
+			cNode.beerCnt = len(beers)
+			if cNode.cost == cNode.bound || len(beers) > 28 {
+				bestNodes = append(bestNodes, cNode)
+			}
+
+			if cNode.cost < upper {
+				nodes = append(nodes, cNode)
+			}
+		}
+
+		if rightNode.getLastBrew().ID > 0 {
+
+			distance = rightNode.getTraveledDistance()
+			if len(getCloseBreweries(breweries, rightNode.getLastBrew(), maxDistance-distance)) > 0 {
+				beers := []string{}
+				for _, i := range rightNode.includedBrews {
+					beers = append(beers, i.beers...)
+				}
+				beers = getUniqueBeers(beers)
+				rightNode.beerCnt = len(beers)
+				if rightNode.cost == rightNode.bound || len(beers) > 28 {
+					bestNodes = append(bestNodes, rightNode)
+				}
+
+				if rightNode.cost < upper {
+					nodes = append(nodes, rightNode)
+				}
+			}
+		} else if rightNode.excludedBrews[len(rightNode.excludedBrews)-1] <= len(breweries)-1 {
+			if rightNode.cost < upper {
+				nodes = append(nodes, rightNode)
+			}
+		}
+	}
+
+	return bestNodes
+}

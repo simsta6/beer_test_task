@@ -39,6 +39,9 @@ func TestHaversine(t *testing.T) {
 }
 
 func TestGetCloseBreweries(t *testing.T) {
+
+	home := brewery{0, "HOME", 51.355468, 11.100790, []string{}, 0.}
+	maxDistance := 2000.
 	//Should return 6 breweries
 	breweries := []brewery{
 		{1267, "Tin Whistle Brewing", 49.49440002441406, -119.61000061035156, []string{}, 7869.721023294844},
@@ -63,7 +66,7 @@ func TestGetCloseBreweries(t *testing.T) {
 		{1099, "Samuel Smith Old Brewery (Tadcaster)", 53.883399963378906, -1.2625000476837158, []string{}, 879.3105926211241},
 		{1111, "Sarah Hughes Brewery", 52.54349899291992, -2.115600109100342, []string{}, 914.0475492655376}}
 
-	got := getCloseBreweries(breweries, 2000.)
+	got := getCloseBreweries(breweries, home, maxDistance/2)
 
 	if len(got) != len(expected) {
 		t.Errorf("getCloseBreweries should have returned empty slice. \nExpected: %v\n got: %v", len(expected), len(got))
@@ -79,7 +82,7 @@ func TestGetCloseBreweries(t *testing.T) {
 	breweries = []brewery{}
 
 	expected = []brewery{}
-	got = getCloseBreweries(breweries, 2000.)
+	got = getCloseBreweries(breweries, home, maxDistance/2)
 
 	if len(got) != len(expected) {
 		t.Errorf("getCloseBreweries should have returned empty slice. \nExpected: %v\n got: %v", len(expected), len(got))
@@ -211,7 +214,30 @@ func TestCountCostandBound(t *testing.T) {
 
 	eCost, eBound := -7.18, -6.
 
-	gCost, gBound := countCostandBound(breweries, 2000., []int{2})
+	gCost, gBound, includedBrews := countCostandBound(breweries, []int{2}, 2000.)
+	gCost = math.Round(gCost*100) / 100
+
+	if eCost != gCost {
+		t.Errorf("countCostandBound returned cost value is different than expected. \nExpected: %v\n got: %v", eCost, gCost)
+	}
+
+	if eBound != gBound {
+		t.Errorf("countCostandBound returned bound value is different than expected. \nExpected: %v\n got: %v", eBound, gBound)
+	}
+
+	// Nothing is excluded
+
+	breweries = []brewery{
+		{0, "HOME", 57, 35, []string{}, 0},
+		{957, "Ostankinskij Pivovarennij Zavod", 55.75579833984375, 37.61759948730469, []string{"Beer"}, 212.37640863461093},
+		{961, "Oy Sinebrychoff AB", 60.38100051879883, 25.110200881958008, []string{"Porter IV", "Koff Special III"}, 682.979146237569},
+		{999, "Pivzavod Baltika /", 59.93899917602539, 30.315799713134766, []string{"Baltika 6 Porter", "Baltika #5", "Baltika #8", "Baltika #9"}, 425.22565488237495},
+		{1094, "Saku lletehas", 59.30139923095703, 24.66790008544922, []string{"Porter"}, 657.168864470112},
+		{1329, "Vivungs Bryggeri", 57.49850082397461, 18.458999633789062, []string{"Romakloster", "DragÃ¶l"}, 994.0936874184431}}
+
+	eCost, eBound = -7.61, -7.
+
+	gCost, gBound, includedBrews = countCostandBound(breweries, []int{}, 2000.)
 	gCost = math.Round(gCost*100) / 100
 
 	if eCost != gCost {
@@ -228,7 +254,7 @@ func TestCountCostandBound(t *testing.T) {
 
 	eCost, eBound = 0, 0.
 
-	gCost, gBound = countCostandBound(breweries, 2000., []int{2})
+	gCost, gBound, includedBrews = countCostandBound(breweries, []int{2}, 2000.)
 	gCost = math.Round(gCost*100) / 100
 
 	if eCost != gCost {
@@ -247,7 +273,7 @@ func TestCountCostandBound(t *testing.T) {
 
 	eCost, eBound = -0.12, 0.
 
-	gCost, gBound = countCostandBound(breweries, 2000., []int{2})
+	gCost, gBound, includedBrews = countCostandBound(breweries, []int{2}, 2000.)
 	gCost = math.Round(gCost*100) / 100
 
 	if eCost != gCost {
@@ -256,5 +282,6 @@ func TestCountCostandBound(t *testing.T) {
 
 	if eBound != gBound {
 		t.Errorf("countCostandBound returned bound value is different than expected. \nExpected: %v\n got: %v", eBound, gBound)
+		t.Errorf("countCostandBound returned bound value is different than expected. \nExpected: %v\n got: %v", includedBrews, gBound)
 	}
 }
