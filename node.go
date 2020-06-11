@@ -2,7 +2,7 @@ package main
 
 type node struct {
 	level                             int
-	cost, bound                       float64
+	profit, bound                     float64
 	includedBrews                     []brewery
 	excludedBrews, includedBrewsIndex []int
 	beerCnt                           int
@@ -28,6 +28,8 @@ func (n *node) getTraveledDistance() float64 {
 	distance := 0.
 	if len(n.includedBrews) == 1 {
 		distance = n.includedBrews[0].distanceToHome
+	} else if len(n.includedBrews) == 0 {
+		distance = 0
 	} else {
 		distance += n.includedBrews[0].distanceToHome
 		for i := 1; i < len(n.includedBrews); i++ {

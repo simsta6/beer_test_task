@@ -13,6 +13,6 @@ type brewery struct {
 	distanceToHome float64
 }
 
-func (brew *brewery) print() {
-	fmt.Printf("\t[%v] %v: %.8f, %.8f ", brew.ID, brew.name, brew.latitude, brew.longitude)
+func (brew *brewery) printWithDistance(lastBrew brewery) {
+	fmt.Printf("\t[%v] %v: %.8f, %.8f distance %.0fkm\n", brew.ID, brew.name, brew.latitude, brew.longitude, haversine(*brew, lastBrew))
 }
