@@ -8,14 +8,13 @@ services:
       MYSQL_DATABASE: beer-database
       MYSQL_USER: root
       MYSQL_ALLOW_EMPTY_PASSWORD: 1
-    container_name: golang_db
+    container_name: db
     ports:
-      - "3306:3306"
-    #tty: true
+      - "3333:3333"
   app:
     build:
       context: .
-    container_name: golang_app
+    container_name: app
     volumes:
         - .:/go/beer-test
     working_dir: /go/beer-test

@@ -1,7 +1,6 @@
 package main
 
 import (
-	//"database/sql"
 	"database/sql"
 	"fmt"
 	"math"
@@ -15,21 +14,12 @@ import (
 
 func main() {
 	maxDistance := 2000.
-	checkArguments()
 
+	checkArguments()
 	lat, err := strconv.ParseFloat(os.Args[1], 64)
 	checkForError(err)
 	lon, err := strconv.ParseFloat(os.Args[2], 64)
 	checkForError(err)
-
-	// lat := 57.
-	// lon := 35.
-
-	// lat := 51.74250300
-	// lon := 19.43295600
-
-	// lat := 51.355468
-	// lon := 11.100790
 
 	home := brewery{0, "HOME", lat, lon, []string{}, 0.}
 	breweries := getBreweriesWithBeersFromDB(home)
@@ -138,7 +128,7 @@ func getBreweriesWithBeersFromDB(home brewery) []brewery {
 	)
 
 	for retry = 0; retry < 10; retry++ {
-		conn, err = sql.Open("mysql", "root:@tcp(golang_db)/beer-database")
+		conn, err = sql.Open("mysql", "root:@tcp(db)/beer-database")
 		if err == nil {
 			break // success!
 		}
